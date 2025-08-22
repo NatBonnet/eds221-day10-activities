@@ -1,0 +1,84 @@
+---
+title: "lter data exploration"
+format: html
+editor: visual
+---
+```{r}
+library(tidyverse)
+library(here)
+library(dplyr)
+library(janitor)
+library(kableExtra)
+```
+
+
+```{r}
+meteo_data <- read_csv(here::here("data", "ntl20_v6.csv"), na = c("-999", "NaN"))
+
+lakes <- read_csv(here::here("data", "ntl33_v7.csv"), na = c("-999", "NaN"))
+```
+
+```{r}
+#data exploration
+unique(lakes$lakeid)
+class(lakes$season)
+
+```
+
+
+```{r}
+unique(lakes$lakeid)
+#look at mean duration for each lake
+
+ggplot(data = lakes, aes(x = lakeid, y = ice_duration))+
+  geom_boxplot(outlier.shape = NA)+
+  theme_minimal()
+```
+
+```{r}
+lakes_mean <- lakes |>
+  group_by(year4)|>
+  summarise(mean_cover_duration = mean(ice_duration, na.rm = TRUE))
+
+ggplot(data = lakes_mean, aes(x = year4, y = mean_cover_duration))+
+  geom_line()+
+  labs(title = "Ice Duration Trends in the Madison Lake Area", 
+      x = "Year", 
+      y = "Ice duration (days)", 
+      caption = "Trend of ice cover duration decreasing over time")+
+  theme_minimal()
+```
+
+```{r}
+
+air_temp <- meteo_data |>
+  filter(month == 1 | month == 2 | month == 12) |>
+  group_by(year4)|>
+  summarise(avg_air_temp = mean(ave_air_temp_adjusted))|>
+  full_join(lakes_mean)
+
+ggplot(data = air_temp, aes(x = avg_air_temp, y= mean_cover_duration, color = avg_air_temp))+
+  geom_jitter()+
+  labs(title = "Mean Average Ice Duration (Dec-Feb) vs. Yearly Average Air Temp", 
+       x = "Air Temperature (C)", 
+       y= "Cover Duration (days)", 
+       caption = "General pattern shows that mean duration decreases with increased air temperature")+
+  theme_minimal()
+```
+
+```{r}
+thaw <- lakes |>
+  filter(year4 >= "1970")|>
+  mutate(ice_off = lubridate::as_date(ice_off))|>
+  mutate(day = lubridate::yday(ice_off))
+
+
+ggplot(data = thaw, aes(x = year4, y= day))+
+  geom_line() +
+  labs(title = "Ice Off Day Over Time in the Madison Lakes Area", 
+       x = "Year", 
+       y= "Day of Ice Off", 
+       caption = "General pattern of the ice off day in the Madison Lakes Area becoming earlier in the year since 1970")+
+  theme_minimal()
+```
+
